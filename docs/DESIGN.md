@@ -5,7 +5,6 @@
 The system converts raw CCTV footage into real-time store analytics through four stages:
 Raw CCTV Clips → Detection Layer (YOLOv8 + ByteTrack) → Event Stream (JSONL) → Intelligence API (FastAPI) → Live Dashboard
 
-text
 
 ### Component Details
 
