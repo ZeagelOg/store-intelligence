@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Store Intelligence — Live Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#0a0e1a;color:#e2e8f0;padding:24px}
+h1{font-size:24px;margin-bottom:24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:24px}
+.card{background:#111827;border:1px solid #1e293b;border-radius:16px;padding:20px}
+.label{font-size:12px;color:#64748b;margin-bottom:8px}
+.value{font-size:32px;font-weight:700}
+.section{font-size:12px;text-transform:uppercase;color:#64748b;margin:24px 0 12px}
+#feed{background:#0d1117;border-radius:8px;padding:12px;height:300px;overflow-y:auto;font-family:monospace;font-size:12px}
+.event{padding:6px 10px;border-radius:6px;margin-bottom:4px;border-left:3px solid}
+.event.entry{border-left-color:#10b981;background:rgba(16,185,129,0.1)}
+.event.exit{border-left-color:#ef4444;background:rgba(239,68,68,0.1)}
+.event.other{border-left-color:#6366f1;background:rgba(99,102,241,0.1)}
+select{background:#111827;color:#e2e8f0;border:1px solid #1e293b;padding:8px 16px;border-radius:8px;margin-left:16px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.ws-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px}
+.ws-connected{background:#10b981}
+.ws-disconnected{background:#ef4444}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>🏬 Store Intelligence — Live Dashboard</h1>
+<div>
+<select id="storeSelect">
+<option value="ST1076">ST1076 - Mumbai</option>
+</select>
+<span style="margin-left:16px">
+<span class="ws-dot ws-disconnected" id="wsDot"></span>
+<span id="wsText" style="font-size:13px">Connecting...</span>
+</span>
+</div>
+</div>
+
+<div class="grid">
+<div class="card"><div class="label">👥 Unique Visitors</div><div class="value" id="visitors">—</div></div>
+<div class="card"><div class="label">📊 Conversion Rate</div><div class="value" id="conversion">—</div></div>
+<div class="card"><div class="label">⏳ Queue Depth</div><div class="value" id="queue">—</div></div>
+<div class="card"><div class="label">⚠️ Abandonment</div><div class="value" id="abandonment">—</div></div>
+</div>
+
+<div class="section">📡 Live Event Feed</div>
+<div id="feed"></div>
+
+<script>
+const API_URL = window.location.origin;
+let ws;
+
+function connectWebSocket() {
+    ws = new WebSocket(API_URL.replace('http','ws') + '/ws/live');
+    ws.onopen = () => {
+        document.getElementById('wsDot').className = 'ws-dot ws-connected';
+        document.getElementById('wsText').innerText = 'Connected';
+    };
+    ws.onclose = () => {
+        document.getElementById('wsDot').className = 'ws-dot ws-disconnected';
+        document.getElementById('wsText').innerText = 'Disconnected';
+        setTimeout(connectWebSocket, 3000);
+    };
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.type === 'event') {
+            const feed = document.getElementById('feed');
+            const div = document.createElement('div');
+            div.className = 'event entry';
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong> | ${data.data.event_type} | ${data.data.visitor_id}`;
+            feed.prepend(div);
+            if (feed.children.length > 50) feed.removeChild(feed.lastChild);
+            setTimeout(refreshMetrics, 500);
+        }
+    };
+}
+
+async function refreshMetrics() {
+    const storeId = document.getElementById('storeSelect').value;
+    try {
+        const res = await fetch(`${API_URL}/stores/${storeId}/metrics`);
+        const d = await res.json();
+        document.getElementById('visitors').innerText = d.unique_visitors || 0;
+        document.getElementById('conversion').innerText = d.conversion_rate ? (d.conversion_rate*100).toFixed(1)+'%' : '0%';
+        document.getElementById('queue').innerText = d.current_queue_depth || 0;
+        document.getElementById('abandonment').innerText = d.abandonment_rate ? (d.abandonment_rate*100).toFixed(1)+'%' : '0%';
+    } catch(e) {}
+}
+
+connectWebSocket();
+refreshMetrics();
+setInterval(refreshMetrics, 10000);
+</script>
+</body>
+</html>
