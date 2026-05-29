@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: store_intelligence
+      POSTGRES_USER: store_admin
+      POSTGRES_PASSWORD: store_secret_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://store_admin:store_secret_2026@db:5432/store_intelligence
+    depends_on:
+      - db
