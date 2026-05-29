@@ -3,9 +3,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: store_intelligence
-      POSTGRES_USER: store_admin
-      POSTGRES_PASSWORD: store_secret_2026
+  POSTGRES_DB: ${POSTGRES_DB}
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
