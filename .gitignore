@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+data/clips/
+*.mp4
+*.jsonl
