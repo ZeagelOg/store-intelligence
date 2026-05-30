@@ -1,6 +1,6 @@
 <div align="center">
   
-# 🏬 Store Intelligence
+# 🏬 Store Intelligence — CCTV Retail Analytics
 ### *From Raw CCTV Footage to Live Store Analytics*
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
@@ -20,12 +20,6 @@ This is my submission for the **Store Intelligence Engineering Challenge** — a
 
 **The Problem:** 40 physical stores, zero offline analytics.  
 **The Solution:** A production-ready pipeline from detection → events → API → dashboard.
-
----
-
-# 🏬 Store Intelligence — CCTV Retail Analytics
-
-Converts raw, anonymised CCTV footage from the **Brigade Road (Bangalore)** retail store into real-time business metrics — footfall, conversion rate, billing-queue depth, and zone heatmaps. Built with YOLOv8 detection, a ByteTrack-style multi-object tracker with Re-ID, a FastAPI ingestion service, and a PostgreSQL event store.
 
 ---
 
