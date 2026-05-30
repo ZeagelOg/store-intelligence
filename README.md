@@ -29,6 +29,7 @@ This is my submission for the **Store Intelligence Engineering Challenge** — a
 - [Camera Mapping](#camera-mapping)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
+- [Skills & Technologies](#skills--technologies)
 - [Setup](#setup)
 - [Running the Pipeline](#running-the-pipeline)
 - [API Reference](#api-reference)
@@ -137,7 +138,85 @@ store-intelligence/
 ```
 
 ---
+## Skills & Technologies
+ 
+### 🎯 Computer Vision & Detection
+ 
+| Skill | Library / Tool | Used For |
+|-------|---------------|----------|
+| Object detection | `ultralytics` (YOLOv8s) | Person detection on COCO class 0 across all 5 cameras |
+| Multi-object tracking | ByteTrack (custom `scipy` Hungarian matching) | Assigning consistent `track_id` across video frames |
+| Kalman filtering | Built into ByteTrack (`MAX_LOST = 30` frames) | Predicting track positions through occlusion |
+| Re-identification | 96-bin HSV histograms + cosine similarity (`numpy`) | Detecting same person re-entering within 120 s window |
+| Staff classification | OpenCV HSV histogram on upper-torso crop | Distinguishing staff uniforms from customers; no face data |
+| Video frame processing | `opencv-python` (`cv2`) | Reading `.mp4` clips, BGR→HSV conversion, 3-frame subsampling |
+| Direction classification | Custom trajectory line-crossing (`numpy`) | Determining `ENTRY` vs `EXIT` from centroid movement |
+ 
+### 🌐 Backend & API
+ 
+| Skill | Library / Tool | Used For |
+|-------|---------------|----------|
+| REST API framework | `FastAPI` | All HTTP endpoints — ingest, metrics, funnel, heatmap, anomalies, health |
+| Request validation | `Pydantic v2` (`BaseModel`, `field_validator`) | Schema validation for all ingest payloads and response shapes |
+| ASGI server | `uvicorn` | Serving the FastAPI app (dev: `--reload`, prod: via Docker) |
+| Async database driver | `asyncpg` | Non-blocking PostgreSQL queries from async FastAPI routes |
+| ORM / query layer | `SQLAlchemy` (async) | Connection pooling, session management, raw SQL via `text()` |
+| Real-time push | `FastAPI WebSocket` | Broadcasting live events to all connected dashboard clients |
+| Structured logging | `structlog` | JSON-formatted request logs with trace ID, method, path, latency |
+| HTTP client | `httpx` | `pipeline/feed.py` batch-posting events to the ingestion API |
+| CORS middleware | `FastAPI CORSMiddleware` | Allowing dashboard and external clients to query the API |
+ 
+### 🗄️ Data Store
+ 
+| Skill | Library / Tool | Used For |
+|-------|---------------|----------|
+| Primary database | `PostgreSQL 16` | Event store — `events` table with UUID PK and JSONB metadata |
+| Idempotent ingestion | `INSERT ON CONFLICT (event_id) DO NOTHING` | Deduplication — safe to re-post the same JSONL file |
+| Analytical queries | PostgreSQL `COUNT(DISTINCT) FILTER`, window functions | Funnel, metrics, anomaly detection — computed at query time |
+| Index strategy | B-tree on `(store_id, timestamp)` and `(visitor_id)` | Sub-50 ms metric queries across 40 stores |
+| Test database | `aiosqlite` (in-memory SQLite) | Fast isolated test runs — no Docker required |
+ 
+### ⚙️ Pipeline & Orchestration
+ 
+| Skill | Library / Tool | Used For |
+|-------|---------------|----------|
+| Event serialisation | `JSONL` (newline-delimited JSON) | Streaming-friendly flat event output from `emit.py` |
+| UUID generation | `uuid` (stdlib) | Unique `event_id` per event — enables idempotent ingestion |
+| SHA-1 hashing | `hashlib` (stdlib) | Deterministic `visitor_id` (`VIS_` + 6-char hex of `store_id + track_id`) |
+| Batch feeding | `pipeline/feed.py` with `httpx` | Chunked POST in batches of 100 (max 500/request) |
+| Realtime simulation | `--realtime` flag in `feed.py` | Throttles to 0.3 s per batch to simulate a live camera stream |
+| Shell orchestration | `bash` (`run.sh`) | One-command end-to-end pipeline: detect → seed → feed |
+ 
+### 🐳 Infrastructure & DevOps
+ 
+| Skill | Library / Tool | Used For |
+|-------|---------------|----------|
+| Containerisation | `Docker` (`python:3.11-slim`) | Reproducible build — installs deps, copies `app/` and `pipeline/` |
+| Service orchestration | `docker-compose` | Spins up `postgres:16-alpine` + `api` with health checks and shared network |
+| Environment config | `.env` / `os.getenv` | `DATABASE_URL` injected at runtime — no hardcoded credentials in code |
+ 
+### 🧪 Testing
+ 
+| Skill | Library / Tool | Used For |
+|-------|---------------|----------|
+| Test framework | `pytest` + `pytest-asyncio` | Async test cases for FastAPI routes and pipeline logic |
+| API test client | `httpx.AsyncClient` | In-process ASGI testing — no running server required |
+| In-memory DB | `aiosqlite` | Isolated SQLite per test session — fast, zero infrastructure |
+| Coverage areas | `test_metrics`, `test_anomalies`, `test_pipeline` | Idempotency, schema validation, anomaly thresholds, BBox IoU, Re-ID |
+ 
+### 📐 Mathematics & Signal Processing
+ 
+| Skill | Technique | Used For |
+|-------|-----------|----------|
+| Cosine similarity | `numpy.dot` on L2-normalised vectors | Re-ID matching — comparing 96-bin HSV appearance descriptors |
+| IoU (Intersection over Union) | BBox area overlap calculation | ByteTracker matching new detections to existing tracks |
+| Z-score anomaly detection | μ ± 2σ threshold | Queue spike (WARN at 2σ, CRITICAL at 3σ), conversion drop at 70% |
+| HSV histogram analysis | 96-bin (H:32 + S:32 + V:32) | Appearance features for Re-ID and staff uniform classification |
+| Linear sum assignment | `scipy.optimize.linear_sum_assignment` | Hungarian algorithm for optimal detection-to-track cost matching |
+ 
+---
 
+ 
 ## Setup
 
 ### Option A — Docker (recommended, no local Python needed)
